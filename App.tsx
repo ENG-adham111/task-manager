@@ -1,55 +1,60 @@
-import React, { useState, useCallback } from 'react';
+
+import React from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-import { TaskProvider } from './context/TaskContext';
-import Sidebar from './components/Sidebar';
+import { AuthProvider, useAuth } from './context/AuthContext';
+// Fix: import useLabs to make it available in the Main component.
+import { LabProvider, useLabs } from './context/LabContext';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
-import Tasks from './components/Tasks';
-import Pomodoro from './components/Pomodoro';
-import Settings from './components/Settings';
-import { AddIcon } from './components/icons';
-import TaskModal from './components/TaskModal';
+import LabsCatalog from './components/LabsCatalog';
+import Leaderboard from './components/Leaderboard';
+import LabEnvironment from './components/LabEnvironment';
 
-type Page = 'dashboard' | 'tasks' | 'pomodoro' | 'settings';
-
-function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const renderPage = useCallback(() => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'tasks':
-        return <Tasks />;
-      case 'pomodoro':
-        return <Pomodoro />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
-  }, [currentPage]);
-
+const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <TaskProvider>
-        <div className="flex h-screen bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text font-sans">
-          <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            {renderPage()}
-          </main>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="fixed bottom-8 right-8 bg-primary hover:bg-primary-focus text-white rounded-full p-4 shadow-lg transform hover:scale-110 transition-all duration-300 z-50"
-            aria-label="Add new task"
-          >
-            <AddIcon />
-          </button>
-          <TaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-        </div>
-      </TaskProvider>
+      <AuthProvider>
+        <LabProvider>
+          <Main />
+        </LabProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
-}
+};
+
+const Main: React.FC = () => {
+  const { user } = useAuth();
+  const [currentPage, setCurrentPage] = React.useState('dashboard');
+  const { activeLabSession } = useLabs();
+
+  const renderPage = () => {
+    if (activeLabSession) {
+      return <LabEnvironment />;
+    }
+    
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard setCurrentPage={setCurrentPage} />;
+      case 'labs':
+        return <LabsCatalog />;
+      case 'leaderboard':
+        return <Leaderboard />;
+      default:
+        return <Dashboard setCurrentPage={setCurrentPage} />;
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text font-sans">
+      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {user ? renderPage() : <LandingPage />}
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
 export default App;

@@ -1,77 +1,54 @@
 import React from 'react';
-import { useTasks } from '../hooks/useTasks';
-import TaskItem from './TaskItem';
+import { useAuth } from '../context/AuthContext';
+import { useLabs } from '../context/LabContext';
 import Card from './ui/Card';
+import Button from './ui/Button';
+import LabCard from './LabCard';
+import { MOCK_LEADERBOARD } from '../data/mockData';
 
-const isToday = (someDate: Date) => {
-    const today = new Date();
-    return someDate.getDate() == today.getDate() &&
-      someDate.getMonth() == today.getMonth() &&
-      someDate.getFullYear() == today.getFullYear();
-};
+interface DashboardProps {
+    setCurrentPage: (page: string) => void;
+}
 
-const Dashboard: React.FC = () => {
-    const { tasks } = useTasks();
-    const incompleteTasks = tasks.filter(task => !task.completed);
+const Dashboard: React.FC<DashboardProps> = ({ setCurrentPage }) => {
+    const { user } = useAuth();
+    const { labs } = useLabs();
+    
+    if (!user) return null;
 
-    const todayTasks = incompleteTasks
-        .filter(task => isToday(new Date(task.deadline)))
-        .sort((a, b) => b.priority.localeCompare(a.priority));
-
-    const upcomingTasks = incompleteTasks
-        .filter(task => !isToday(new Date(task.deadline)))
-        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
-        .slice(0, 5);
-
-    const completedCount = tasks.filter(t => t.completed).length;
-    const productivityScore = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+    const userRank = MOCK_LEADERBOARD.find(entry => entry.user.id === user.id)?.rank || 'N/A';
+    const newLabs = labs.slice(0, 2);
 
   return (
     <div className="animate-fade-in-up space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">Dashboard</h1>
-        <p className="text-light-text-secondary dark:text-dark-text-secondary">Welcome back! Here's your productivity snapshot.</p>
+        <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">Welcome back, {user.name}!</h1>
+        <p className="text-light-text-secondary dark:text-dark-text-secondary">Ready to tackle your next challenge?</p>
       </header>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-            <h3 className="font-bold text-lg">Productivity Score</h3>
-            <p className="text-5xl font-extrabold text-primary">{productivityScore}%</p>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">{completedCount} of {tasks.length} tasks completed.</p>
+            <h3 className="font-semibold text-light-text-secondary dark:text-dark-text-secondary">Your Points</h3>
+            <p className="text-4xl font-extrabold text-primary">{user.points.toLocaleString()}</p>
         </Card>
         <Card>
-            <h3 className="font-bold text-lg">Today's Tasks</h3>
-            <p className="text-5xl font-extrabold text-secondary">{todayTasks.length}</p>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">due today</p>
+            <h3 className="font-semibold text-light-text-secondary dark:text-dark-text-secondary">Global Rank</h3>
+            <p className="text-4xl font-extrabold text-secondary">#{userRank}</p>
         </Card>
-         <Card>
-            <h3 className="font-bold text-lg">Upcoming Tasks</h3>
-            <p className="text-5xl font-extrabold text-accent">{upcomingTasks.length}</p>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">in the next 7 days</p>
+        <Card>
+            <h3 className="font-semibold text-light-text-secondary dark:text-dark-text-secondary">Labs Completed</h3>
+            <p className="text-4xl font-extrabold text-accent">{user.completedLabs.length}</p>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Today's Focus</h2>
-          <div className="space-y-4">
-            {todayTasks.length > 0 ? (
-              todayTasks.map(task => <TaskItem key={task.id} task={task} />)
-            ) : (
-              <Card><p className="text-center text-light-text-secondary dark:text-dark-text-secondary">No tasks due today. Enjoy your day!</p></Card>
-            )}
+      <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">New Labs</h2>
+            <Button variant="secondary" size="sm" onClick={() => setCurrentPage('labs')}>View All Labs</Button>
           </div>
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Upcoming</h2>
-          <div className="space-y-4">
-            {upcomingTasks.length > 0 ? (
-              upcomingTasks.map(task => <TaskItem key={task.id} task={task} />)
-            ) : (
-                <Card><p className="text-center text-light-text-secondary dark:text-dark-text-secondary">No upcoming tasks. Plan ahead!</p></Card>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {newLabs.map(lab => <LabCard key={lab.id} lab={lab} />)}
           </div>
-        </div>
       </div>
     </div>
   );
